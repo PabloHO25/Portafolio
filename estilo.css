@@ -1,0 +1,20 @@
+
+
+
+ .carousel-inner img{
+object-fit: cover;
+
+}
+
+.ancho{
+
+height: 50%;
+	border-style: solid;
+  border-color: red;
+}
+#cont{
+	height: 100vh;
+}
+.text-white{
+	color: floralwhite;
+}
