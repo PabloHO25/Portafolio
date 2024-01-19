@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>K-NN</title>
+
+   
+	<link rel="stylesheet" type="text/css" href="estilo.css">
+   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/katex.min.css">
+<!-- The loading of KaTeX is deferred to speed up page rendering -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/katex.min.js"></script>
+<!-- To automatically render math in text elements -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body);"></script>
+
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+<!-- and it's easy to individually load additional languages -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"></script>
+
+<script>hljs.highlightAll();</script>
+
+</head>
+<body>
+	
+
+	<div class="container-fluid">
+
+		<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <div class="container-fluid">
+  <a class="navbar-brand" href="#">Home</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNavDropdown">
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link " aria-current="page" href="#">My Skills</a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" href="#">Portafolio</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">About</a>
+        </li>
+        
+      </ul>
+   </div>
+  </div>
+</nav>
+  		<h3> Implementación del Algoritmo K-Means</h3>
+		<p>
+	El algoritmo K-Means es utilizado para clasificar  de manera supervisada elementos de un dataset.
+    El propósito del algoritmo de k-vecinos más cercanos es encontrar los puntos más cercanos a un punto de consulta específico, permitiendo así la asignación de una etiqueta de clase a ese punto. Para llevar a cabo esta tarea, el algoritmo k-NN selecciona k puntos aleatorios llamados centroides y representan una clase de clasificación.
+</p>
+    <p>Para cada punto que representa un objeto en el conjunto se calcula la distancia hacia cada centroide y la distancia más cercana determina la nueva clasificación del punto.
+    
+    Cuando se termino de establacer la clasificación de los puntos, se actualizan los centroides a partir de un promedio de esta manera obteniendo nuevos puntos centroides. 
+
+
+    Al obtener nuevos centroides puede ocurrir que los valores en la frontera de cada clasificación la distancia ya no es la más cercana y por lo tanto se debe repetir el proceso de clasificación  a partir de la distancia  y volver actualizar la ubicación de los centroides hasta que no haya actualización de estos.		
+    </p>
+    <p>
+        La distancia entre los puntos se puede obtener empleando la distancia euclidanea o Manhattan. En este ejemplo se uso la distancia euclidea para 3 valores del dataset.
+
+    </p>
+    <p>El dataset con cual se corrió al algoritmo es el <a href="https://www.kaggle.com/datasets/saurabh00007/iriscsv?resource=download">Iris.csv</a> del cual se tomaron las primeras tres columnas como datos de entrada. </p>
+    <p>
+        \(d\,=\, \sqrt{\sum{(a_1-a_2)^2 \,+\, (b_1-b_2)^2 \,+\, (c_1-c_2)^2}}\)
+    </p>
+
+<h3>Código del programa en Python</h3>
+<pre><code class="language-python">
+
+#Algoritmo K-Vecinos más cercanos
+import csv
+import random as rd
+import math
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+colores = list (mcolors.cnames.keys())
+
+
+class punto:
+    def __init__(self, sl,sw,pl,pw, centro=None,color=None,ocurrencias=None,Especie=None):
+        #x coordenada  en el eje x
+        # y coordenada en el eje y
+        # centro variable el cual es el centroide del punto actual
+        self.sl=sl
+        self.sw=sw
+        self.pl=pl
+        self.pw=pw
+        self.centro=None  
+        self.color=None
+        self.hist=[]
+        
+        if centro :
+            self.centro = centro
+        if color:
+            self.color=color
+        self.hist=[]
+        self.distancia=0
+        self.ocurrencias=0
+        self.especie=Especie
+
+    def Dist_pt(self, pt):
+        res= math.sqrt((self.sl - pt.sl)**2 +(self.sw-pt.sw)**2+(self.pl-pt.pl)**2+(self.pw-pt.pw)**2)
+        return res
+    
+    def inHist(self,a):
+        self.hist.append(a)
+
+#recibe la ruta del archivo y el numero de puntos medios
+class Means:
+    def __init__(self, ruta, k):
+        self.ruta=ruta
+        self.k=k
+        self.puntos=[]
+        self.centroide=[]
+        self.band=False
+    
+        #self.arch=self.openRuta()
+    def openRuta(self):
+        with open(self.ruta) as irisDS:
+            ds = csv.reader(irisDS)
+            next(ds,None) # para saltar el header
+            for row in ds:
+                self.puntos.append(punto(  float(row[0]),float(row[1]), float(row[2]),float(row[3]), Especie= row[4]   ))
+                
+            
+    def addPunto(self,sl,sw,pl,pw, centro=None,color=None,ocurrencias=None,Especie=None):
+        self.puntos.append(punto(sl, sw, pl, pw,centro,color,ocurrencias, Especie)) 
+        self.calc_dist()
+        self.Ajus_centro()
+        self.grafica(True)
+
+    
+    def initCentro(self):
+        con=0
+        col=0
+        ale=[]
+        
+        for i in range(self.k):
+            a=rd.randint(0, len(self.puntos)-1)
+            while ( a in ale):   ## para que no se repitan los centroides aleatorios
+                #print("ciclo")
+                a=rd.randint(0, len(self.puntos)-1)
+            ale.append(a)
+            aux=punto(self.puntos[a].sl,self.puntos[a].sw,self.puntos[a].pl,self.puntos[a].pw, color=colores[col],Especie=self.puntos[a].especie)
+
+            self.centroide.append(aux)       
+            col+=3
+            
+        
+            
+    def grafica(self,dist=False):
+        fig, ax = plt.subplots()
+        plt.xlabel("sepal lenght")
+        plt.ylabel("petal lenght")
+        
+        if self.centroide==[]:
+            for i in self.puntos:
+                plt.plot(i.sl, i.pl,'o',color='blue',ms=5)
+        else:
+            if  dist:   
+                for i in self.puntos:
+                    plt.plot(i.sl,i.pl,'o',color = i.centro.color)
+                for i in self.centroide:
+                    plt.plot(i.sl,i.pl,'x',color='black',ms=10)
+            else:
+                for i in self.puntos:
+                    plt.plot(i.sl,i.pl,'o',color="blue")
+                for i in self.centroide:
+                    plt.plot(i.sl,i.pl,'x',color='black',ms=10)
+                
+        plt.show()
+        
+    
+    def  dist(self, a,b):
+        
+        res= math.sqrt((a.sl - b.sl)**2 +(a.sw-b.sw)**2+(a.pl-b.pl)**2+(a.pw-b.pw)**2)
+        return res
+        
+    def calc_dist(self):
+        
+        for i in self.puntos:
+            for j in self.centroide:
+                
+                j.distancia=self.dist(j,i)
+                #
+            self.centroide.sort(key=lambda a: a.distancia)
+            
+            i.centro=self.centroide[0]
+            i.color=self.centroide[0].color
+            i.distancia=self.centroide[0].distancia
+            
+     
+                
+    def Ajus_centro(self):
+          
+            
+            for i in self.centroide:
+                i.hist.append(punto(i.sl, i.sw, i.pl, i.pw)) # ya estoy agregando los valores para la historia de valores
+                i.sl=0
+                i.sw=0
+                i.pl=0
+                i.pw=0
+                i.ocurrencias=0
+
+            for i in self.puntos:
+                for j in self.centroide:
+                    if i.centro == j:
+
+                        j.sl+=i.sl
+                        j.sw+=i.sw
+                        j.pl+=i.pl
+                        j.pw+=i.pw
+                        j.ocurrencias+=1
+           
+
+            for i in self.centroide:
+            
+                    i.sl=i.sl/i.ocurrencias
+                    i.sw=i.sw/i.ocurrencias
+                    i.pl=i.pl/i.ocurrencias
+                    i.pw=i.pw/i.ocurrencias
+                    
+                        
+    def ejecuta(self):
+        self.openRuta()
+        self.grafica()
+        self.initCentro() #paso 3
+        self.grafica()
+       
+    
+  
+        while True :
+            
+            # cuando modifico el centroide tambien se modifica el aux
+            aux=[]
+            for i in self.centroide:
+                aux.append([i.sl,i.sw,i.pl,i.pw])
+            self.calc_dist() # paso 4
+            self.grafica(True)
+            
+            try:
+                
+                self.Ajus_centro() # este es el paso 5
+            except Exception as inst:
+
+                return
+            self.grafica(True)
+          
+            if self.comp_centroide(aux): # si ya no hubo actualizacion entonces se sale del ciclo
+                break
+      
+          
+                   
+    def printCentroide(self):
+        for i in self.centroide:
+            print(i.sl,i.sw,i.pl,i.pw)
+    def comp_centroide(self, aux):
+        #aux solo es una lista con los valores
+        #compara si ambas listas son iguales
+        for i in range(len(self.centroide)):
+            
+            if not (self.centroide[i].sl== aux[i][0] and self.centroide[i].sw == aux[i][1] and self.centroide[i].pl ==aux[i][2] and self.centroide[i].pw ==aux[i][3])  :
+                return False
+        return True
+    def ejecuta_k_vecinos(self,sl,sw,pl,pw,k):
+        self.ejecuta()
+        last=punto(sl, sw, pl, pw)
+        l=[] # aqui se guardaran las distancias float y el objeto punto
+        for i in self.puntos:
+            l.append([self.dist( i , last),i]) # obteniendo las 
+        l.sort(key = lambda a: a[0]) #ordenando por la llave de distancia
+        l=l[0:k] #seleccionando solo los primeros k vecinos
+        for i in self.centroide:
+            i.ocurrencias=0
+            
+        for i in l:
+            for j in self.centroide:
+                if i[1].centro == j:
+                    j.ocurrencias+=1
+        
+        self.centroide.sort(key=lambda a:  a.ocurrencias)
+        
+        last.centro=self.centroide[-1]
+        last.color=self.centroide[-1].color
+        last.distancia=l[0][0]
+       
+        self.puntos.append(last)
+        print("VERIFICANDO")
+        for i in l:
+            print(i[1].color, "  distancia: ",i[0])
+        
+        print("GRAFICA CON EL NUEVO PUNTO")
+        self.grafica(True)
+        
+        return
+A=Means('IRIS.csv',5)
+#agregando otro punto 
+A.ejecuta_k_vecinos(6.5 , 1 , 2.5, 3, 5)
+
+</code></pre>
+<div class="container-fluid">
+    <picture>
+                <figcaption>Puntos graficados sin clasificar</figcaption>
+
+        <img src="C:\Users\Pablo\OneDrive - Universidad Juarez Autonoma de Tabasco\Desktop\portafolio\image\means1.png">
+    </picture>
+<picture>
+        <figcaption>Puntos clasificados con k = 5. (En ocasiones se aprecia cierta anomalía en la representación de la clasificación  y,  es por que se tomaron 3 valores y no 2, por lo que la representación ideal sería  de 3 dimensiones)</figcaption>
+
+    <img src="C:\Users\Pablo\OneDrive - Universidad Juarez Autonoma de Tabasco\Desktop\portafolio\image\means2.png">
+</picture>
+</div>
+</div>
+   
+
+
+</body>
+</html>
