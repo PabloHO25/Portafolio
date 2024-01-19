@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Automata</title>
+
+
+	<link rel="stylesheet" type="text/css" href="estilo.css">
+   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script type="text/javascript" id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+</script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+<!-- and it's easy to individually load additional languages -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"></script>
+
+<script>hljs.highlightAll();</script>
+
+</head>
+<body>
+	
+
+	<div class="container-fluid">
+		
+		<h3> Programa que genera imágenes de Autómatas Celulares</h3>
+		<p>
+		Un autómata es una máquina de compuesta de un conjunto de estados  y un alfabeto que le permite pasar de un estado a otro.
+		Un autómata celular es el módelo computacional más simple y consiste en un grid de celdas, donde cada una puede encontrarse en un estado específico. La evolución del estado de cada celda sigue reglas preestablecidas y depende de los estados de las celdas circundantes.
+		</p>
+
+
+	
+ <p>Este es un ejemplo implementado en Python  utilizando la biblioteca PIL para generar la imagen.</p>
+
+
+
+
+<pre><code class="language-python">
+	
+from PIL import Image, ImageDraw
+
+import random as rd
+#numero de casillas
+long = 50
+
+array=list()
+
+def Abin8(n):
+    """
+    Traduce un numero a binario como cadena
+    """
+    res=""
+    while (n>0):
+        if(n%2==0):
+            res+="0"
+        else:
+            res+="1"
+        n=n//2
+    for i in range(8-len(res)):
+        res+="0"
+    return res[::-1]
+    
+
+def Regla(palabra):
+    """
+    Genera el diccionario de correspondencia
+    000->ec
+    001->ec
+    2...
+    Regla(palabra) -> dict 
+    """
+    a=len(palabra)-1
+    rule={}
+    for i in range(8):
+        rule[Abin8(i)[-3:]]=palabra[a-i]
+    
+    return rule    
+
+def evLocal(a,b,c,rule:dict):
+    """
+    Mapeo de la regla
+    """
+    return rule[a+b+c]
+
+#el numero de celulas es fijo y es opcional (le estoy poniendo 20 )
+
+def Qini(longitud):
+    """
+    Genera el arreglo origen las celulas se llenan aleatoriamente
+    Devuelve el arreglo origen
+    Qini(longitud) -> list
+    """
+    array=list()
+    for i in range(longitud):
+        array.append(str(rd.randint(0, 1)))
+    return array
+
+if __name__ == '__main__':
+	#numero de regla acepta de 0 a 255
+	#porque se consideran 3 valores y cada uno de estos con 2 posibiles, 
+	# obteniendo 2^3 combinaciones lo que es igual a 8, y como resultado 256 reglas distintas
+	regla=110
+    height = 1000
+    width = 1000
+    image = Image.new(mode='RGB', size=(height, width), color="white")
+
+    # Draw some lines
+    draw = ImageDraw.Draw(image)
+    y_start = 0
+    y_end = image.height
+    step_size = int(image.width / long)
+
+    for x in range(0, image.width, step_size):
+        line = ((x, y_start), (x, y_end))
+        draw.line(line, fill=(0,0,0))
+    x_start = 0
+    x_end = image.width
+
+    for y in range(0, image.height, step_size):
+        line = ((x_start, y), (x_end, y))
+        draw.line(line, fill=(0,0,0))
+    
+    #Aqui hay que actualizar la imagen
+    #colores  white=0, black=1
+    #diccionario de la regla 110
+    rule=Regla(Abin8(regla))
+    
+    #Generando el arreglo con el estados iniciales
+    AIni=Qini(long)
+    
+    Matriz=list()
+    Matriz.append(AIni)
+    x1=0
+    y1=0
+    x2 = width/long 
+    y2 = height/long
+    for i in range(long): #generaciones
+    #graficar el estado inicial
+        NArray=list()
+        for j in range(long): #celulas
+            if i==0:
+                if AIni[j]== '1':
+                    draw.rectangle((x1,y1,x2,y2),  fill="blue")
+            else:
+            	#considerar los casos donde hay problemas con la frontera, 
+            	#el grid es una matriz circular
+                a=j-1
+                c=j+1
+                if j==0:
+                    # k,j,j+1
+                    a=long-1
+                elif j==long-1:
+                    #j-1,j,0
+                    c=0
+                #obteniendo el nuevo valor de la celda a partir de la anterior generacion
+                if (evLocal(AIni[a] , AIni[j], AIni[c], rule)=='1'):
+                        draw.rectangle((x1,y1,x2,y2),  fill="blue")
+                        NArray.append('1')
+                else:
+                        NArray.append('0')
+         #calculos para el tamaño de las celdas         
+            x1+=width/long
+            x2+=width/long
+        x1=0
+        y1=width/long*(i+1)
+        x2=width/long
+        y2=y1+width/long
+        if i!=0:
+            AIni=NArray
+            Matriz.append(NArray)
+    del draw
+    image.show()
+    image.save("regla"+str(regla)+".png")
+
+
+</code></pre>
+	
+<div class="row" >
+	<div class="col-1 col-md-1 col-lg-1" >
+		
+	</div>
+	<div class="col-5 col-md-5 col-lg-5"  >
+		
+<figure >
+			<img  src="C:\Users\Pablo\OneDrive - Universidad Juarez Autonoma de Tabasco\Desktop\portafolio\image\regla110.jpg" class="img-fit">
+			<figcaption  id="autCel">
+			Imagen Generada
+		</figcaption>
+
+</figure>
+		
+		
+	</div>
+
+	<div class="col-5 col-md-5 col-lg-5" >
+		
+		<figure>
+					<img src="C:\Users\Pablo\OneDrive - Universidad Juarez Autonoma de Tabasco\Desktop\portafolio\image\dic110.png"class="img-fit">
+<figcaption id="autCel">Diccionario con la regla 110 la cual se utilizo en esta corrida del programa</figcaption>
+		</figure>
+	
+	
+<div class="col-1 col-md-1 col-lg-1" >
+	</div>	
+	</div>
+
+</div>
+
+	
+
+</div>
+   
+
+
+</body>
+</html>
