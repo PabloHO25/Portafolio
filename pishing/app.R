@@ -1,5 +1,4 @@
 #install.packages(c("shiny", "DT", "foreign", "ggplot2", "cluster"))
-install.packages("shinylive")
 
 
 library(shiny)
@@ -7,6 +6,9 @@ library(DT)
 library(foreign)
 library(ggplot2)
 options(shiny.maxRequestSize = 100 * 1024^2)
+
+# Dataset incorporado a la aplicación Shinylive
+datos <- as.data.frame(read.arff("Training Dataset.arff"))
 
 # Las métricas no alteran el objetivo del recocido: sigue siendo la pureza.
 calcular_metricas <- function(X, modelo, clases, semilla) {
@@ -36,10 +38,10 @@ calcular_metricas <- function(X, modelo, clases, semilla) {
 }
 
 ui <- fluidPage(
-  titlePanel("Selección de variables mediante recocido simulado"),
+  titlePanel("Selección de variables mediante recocido simulado Dataset Pishing WebSites"),
   sidebarLayout(
     sidebarPanel(
-      fileInput("archivo", "Dataset ARFF", accept = ".arff"),
+      helpText("Dataset precargado: Phishing Websites"),
       numericInput("temperatura", "Temperatura inicial (> 1)", 10000, min = 1.01),
       numericInput("alpha", "Factor de enfriamiento (0 < α < 1)", 0.99, min = 0.001, max = 0.9999, step = 0.001),
       helpText("Ejemplo: α = 0.99 reduce la temperatura un 1 % por iteración. La temperatura final es 1."),
@@ -52,6 +54,7 @@ ui <- fluidPage(
     mainPanel(
       verbatimTextOutput("resumen"),
       tabsetPanel(
+        tabPanel("Dataset", br(), textOutput("dimension_datos"), DTOutput("tabla_datos")),
         tabPanel("Convergencia", plotOutput("convergencia", height = "430px")),
         tabPanel("Gráfico de clusters", plotOutput("clusters_plot", height = "480px")),
         tabPanel("Métricas", br(),
@@ -67,9 +70,9 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   resultado <- reactiveVal(NULL)
-  observeEvent(input$archivo, { resultado(NULL) })
+  output$dimension_datos <- renderText(sprintf("Dataset: %s registros y %s columnas", nrow(datos), ncol(datos)))
+  output$tabla_datos <- renderDT(datatable(datos, rownames = FALSE, filter = "top", options = list(pageLength = 10, scrollX = TRUE, deferRender = TRUE)))
   observeEvent(input$ejecutar, {
-    req(input$archivo)
     tryCatch({
       t0 <- input$temperatura; alpha <- input$alpha; k <- input$clusters; semilla <- input$semilla
       if (!is.finite(t0) || t0 <= 1) stop("La temperatura inicial debe ser mayor que 1.")
@@ -78,7 +81,7 @@ server <- function(input, output, session) {
       if (!is.finite(semilla) || semilla < 0 || semilla > 1000000 || semilla != floor(semilla)) stop("La semilla debe ser un entero entre 0 y 1000000.")
       n_iter <- ceiling(log(1 / t0) / log(alpha))
       if (!is.finite(n_iter) || n_iter > 20000) stop("Esta configuración supera 20000 iteraciones; disminuye α o la temperatura inicial.")
-      df <- as.data.frame(read.arff(input$archivo$datapath))
+      df <- datos
       if (!"Result" %in% names(df)) stop("El archivo debe contener la columna Result.")
       y <- df$Result; X <- df[, names(df) != "Result", drop = FALSE]
       if (!ncol(X)) stop("No hay variables predictoras.")
@@ -157,7 +160,7 @@ server <- function(input, output, session) {
   })
   output$resumen <- renderText({
     r <- resultado()
-    if (is.null(r)) return("Carga tu archivo ARFF y pulsa Ejecutar recocido.")
+    if (is.null(r)) return("Dataset precargado. Pulsa Ejecutar recocido.")
     paste0("Mejor pureza: ", round(r$best, 4), " % | Variables: ", sum(r$mask), "/", length(r$mask),
            "\nFilas: ", r$n, " | Iteraciones: ", r$iteraciones, " | Tiempo: ", round(r$segundos, 1), " s",
            "\nTemperatura inicial: ", r$t0, " | α: ", r$alpha, " | Temperatura final: ", signif(r$final, 5),
